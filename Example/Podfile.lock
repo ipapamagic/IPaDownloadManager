@@ -1,0 +1,27 @@
+PODS:
+  - IPaDownloadManager (1.0):
+    - IPaSecurity (~> 3.1)
+  - IPaLog (2.3)
+  - IPaSecurity (3.1):
+    - IPaLog (>= 2.1)
+
+DEPENDENCIES:
+  - IPaDownloadManager (from `../`)
+
+SPEC REPOS:
+  https://github.com/ipapamagic/IPaPods.git:
+    - IPaLog
+    - IPaSecurity
+
+EXTERNAL SOURCES:
+  IPaDownloadManager:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  IPaDownloadManager: 6ecc709cc332fc922f7333fc1be31600ee819344
+  IPaLog: c9285b90746c5ec7082db4efafe996d680a0c222
+  IPaSecurity: 0abd374149fd917d01c6845854a924b5bc79de17
+
+PODFILE CHECKSUM: a8970117ad2c0e639c3114cfab39af0dde244870
+
+COCOAPODS: 1.7.0.beta.2
