@@ -9,8 +9,7 @@ import Foundation
 import IPaLog
 @objc class IPaDownloadOperation : Operation {
     var loadedFileURL:URL
-    let fileId:String
-    var request:URLRequest
+    var url:URL
     var task:URLSessionDownloadTask?
     weak var session:URLSession?
     var _finished:Bool = false
@@ -34,9 +33,8 @@ import IPaLog
             return true
         }
     }
-    init(request:URLRequest,fileId:String,session:URLSession,loadedFileURL:URL) {
-        self.request = request
-        self.fileId = fileId
+    init(url:URL,session:URLSession,loadedFileURL:URL) {
+        self.url = url
         self.session = session
         self.loadedFileURL = loadedFileURL
     }
@@ -47,6 +45,16 @@ import IPaLog
             return;
         }
         self.willChangeValue(forKey: "isExecuting")
+        if FileManager.default.fileExists(atPath: self.loadedFileURL.absoluteString) {
+            
+            self.willChangeValue(forKey: "isExecuting")
+            self.isFinished = true
+            self.didChangeValue(forKey: "isExecuting")
+            return;
+        }
+        
+        
+        let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
         task = session?.downloadTask(with: request, completionHandler: {(location,response,error) in
             if error == nil {
                 if self.isCancelled {
@@ -56,11 +64,7 @@ import IPaLog
                 guard let location = location else {
                     return
                 }
-                //move file to cache first
                 
-                if FileManager.default.fileExists(atPath: self.loadedFileURL.absoluteString) {
-                    try? FileManager.default.removeItem(at: self.loadedFileURL)
-                }
                 try? FileManager.default.copyItem(at: location, to: self.loadedFileURL)
                 
             }

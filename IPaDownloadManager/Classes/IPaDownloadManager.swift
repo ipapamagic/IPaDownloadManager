@@ -13,6 +13,7 @@ open class IPaDownloadManager: NSObject {
     public let IPaFileDownloadedKeyFileUrl = "IPaFileDownloadedKeyFileUrl"
     public let IPaFileDownloadedKeyFileId = "IPaFileDownloadedKeyFileId"
     static public let shared = IPaDownloadManager()
+    var queueList = [String:IPaDownloadOperation]()
     lazy var operationQueue:OperationQueue = {
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = 3
@@ -45,57 +46,48 @@ open class IPaDownloadManager: NSObject {
         }
     }
     
-    func getCacheURL(with fileId:String) -> URL
+    func getCache(with url:URL) -> URL
     {
-        let filePath = (cachePath as NSString).appendingPathComponent("\(fileId.md5String!)")
+        let filePath = (cachePath as NSString).appendingPathComponent("\(url.absoluteString.md5String!)")
         return URL(fileURLWithPath: filePath)
     }
     
-    open func download(from url:URL,fileId:String,complete:@escaping IPaDownloadCompletedHandler){
-        let cacheFileUrl = getCacheURL(with: fileId)
-        if FileManager.default.fileExists(atPath: cacheFileUrl.absoluteString) {
-            complete(.success(cacheFileUrl))
-        }
-        else {
-            doDownload(url: url, fileId: fileId,cacheFileUrl: cacheFileUrl,complete:complete)
-        }
+    open func download(from url:URL,downloadId:String,complete:@escaping IPaDownloadCompletedHandler){
+        let cacheFileUrl = getCache(with: url)
         
-
-    }
-    func operation(with fileId:String) -> IPaDownloadOperation? {
-        let currentQueue = operationQueue.operations
-        return currentQueue.first(where: { (operation) -> Bool in
-            guard let downloadOperation = operation as? IPaDownloadOperation else {
-                return false
+        let operation = IPaDownloadOperation(url: url, session: session,loadedFileURL:cacheFileUrl)
+        self.queueList[downloadId] = operation
+        operation.completionBlock = {
+            self.queueList.removeValue(forKey: downloadId)
+            complete(.success(operation.loadedFileURL))
+            
+        }
+        guard let operations = operationQueue.operations as? [IPaDownloadOperation] else {
+            return
+        }
+        let targetOperation = queueList[downloadId]
+        for workingOperation in operations {
+            
+            if workingOperation.url.absoluteString == url.absoluteString {
+                operation.addDependency(workingOperation)
             }
-            return downloadOperation.fileId == fileId
-        }) as? IPaDownloadOperation
-        
+            else if workingOperation == targetOperation {
+                workingOperation.cancel()
+            }
+            
+        }
+        operationQueue.addOperation(operation)
     }
+
  
     
-    open func cancelDownload(with fileId:String) {
-        if let operation = self.operation(with: fileId) {
+    open func cancelDownload(with downloadId:String) {
+        if let operation = self.queueList[downloadId] {
             operation.cancel()
         }
     }
     open func cancelAllOperation (){
         operationQueue.cancelAllOperations()
     }
-    func doDownload(url:URL,fileId:String,cacheFileUrl:URL,complete:@escaping IPaDownloadCompletedHandler) {
-        if let operation = self.operation(with: fileId) {
-            if !operation.isCancelled {
-                if operation.request.url?.absoluteString != url.absoluteString {
-                    operation.cancel()
-                }
-            }
-        }
-        let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
-        let operation = IPaDownloadOperation(request: request, fileId: fileId, session: session,loadedFileURL:cacheFileUrl)
-        operation.completionBlock = {
-            complete(.success(operation.loadedFileURL))
-        }
-        operationQueue.addOperation(operation)
     
-    }
 }
