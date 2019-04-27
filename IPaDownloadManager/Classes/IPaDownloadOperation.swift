@@ -58,11 +58,10 @@ import IPaLog
                 }
                 //move file to cache first
                 
-                do {
-                    try FileManager.default.copyItem(at: location, to: self.loadedFileURL)
-                } catch {
-                    fatalError()
+                if FileManager.default.fileExists(atPath: self.loadedFileURL.absoluteString) {
+                    try? FileManager.default.removeItem(at: self.loadedFileURL)
                 }
+                try? FileManager.default.copyItem(at: location, to: self.loadedFileURL)
                 
             }
             else {
