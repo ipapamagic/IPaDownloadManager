@@ -13,7 +13,6 @@ open class IPaDownloadManager: NSObject {
     public let IPaFileDownloadedKeyFileUrl = "IPaFileDownloadedKeyFileUrl"
     public let IPaFileDownloadedKeyFileId = "IPaFileDownloadedKeyFileId"
     static public let shared = IPaDownloadManager()
-    var queueList = [String:IPaDownloadOperation]()
     lazy var operationQueue:OperationQueue = {
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = 3
@@ -52,40 +51,27 @@ open class IPaDownloadManager: NSObject {
         return URL(fileURLWithPath: filePath)
     }
     
-    open func download(from url:URL,downloadId:String,complete:@escaping IPaDownloadCompletedHandler){
+    open func download(from url:URL,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
         let cacheFileUrl = getCache(with: url)
         
         let operation = IPaDownloadOperation(url: url, session: session,loadedFileURL:cacheFileUrl)
-        self.queueList[downloadId] = operation
+        
         operation.completionBlock = {
-            self.queueList.removeValue(forKey: downloadId)
             complete(.success(operation.loadedFileURL))
             
         }
-        guard let operations = operationQueue.operations as? [IPaDownloadOperation] else {
-            return
-        }
-        let targetOperation = queueList[downloadId]
-        for workingOperation in operations {
-            
-            if workingOperation.url.absoluteString == url.absoluteString {
-                operation.addDependency(workingOperation)
+        if let operations = operationQueue.operations as? [IPaDownloadOperation] {
+            for workingOperation in operations {
+                
+                if workingOperation.url.absoluteString == url.absoluteString {
+                    operation.addDependency(workingOperation)
+                }
             }
-            else if workingOperation == targetOperation {
-                workingOperation.cancel()
-            }
-            
         }
         operationQueue.addOperation(operation)
+        return operation
     }
-
- 
     
-    open func cancelDownload(with downloadId:String) {
-        if let operation = self.queueList[downloadId] {
-            operation.cancel()
-        }
-    }
     open func cancelAllOperation (){
         operationQueue.cancelAllOperations()
     }
