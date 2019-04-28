@@ -44,15 +44,14 @@ open class IPaDownloadManager: NSObject {
             operationQueue.maxConcurrentOperationCount = newValue
         }
     }
-    
-    func getCache(with url:URL) -> URL
-    {
-        let filePath = (cachePath as NSString).appendingPathComponent("\(url.absoluteString.md5String!)")
-        return URL(fileURLWithPath: filePath)
+    func cacheFilePath(with url:URL) -> String {
+         return (cachePath as NSString).appendingPathComponent("\(url.absoluteString.md5String!)")
     }
-    
-    open func download(from url:URL,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
-        let cacheFileUrl = getCache(with: url)
+    open func download(from url:URL,fileExt:String,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
+        return self.download(from: url, to: URL(fileURLWithPath:cacheFilePath(with:url) + ".\(fileExt)"), complete: complete)
+    }
+    open func download(from url:URL,to path:URL? = nil,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
+        let cacheFileUrl = path ?? URL(fileURLWithPath:cacheFilePath(with:url))
         
         let operation = IPaDownloadOperation(url: url, session: session,loadedFileURL:cacheFileUrl)
         
