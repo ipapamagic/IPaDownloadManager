@@ -10,6 +10,7 @@ import IPaLog
 @objc class IPaDownloadOperation : Operation {
     var loadedFileURL:URL
     var url:URL
+    var headerFields:[String:String]?
     var task:URLSessionDownloadTask?
     weak var session:URLSession?
     var _finished:Bool = false
@@ -33,9 +34,10 @@ import IPaLog
             return true
         }
     }
-    init(url:URL,session:URLSession,loadedFileURL:URL) {
+    init(url:URL,session:URLSession,headerFields:[String:String]?,loadedFileURL:URL) {
         self.url = url
         self.session = session
+        self.headerFields = headerFields
         self.loadedFileURL = loadedFileURL
     }
     override func start() {
@@ -54,7 +56,12 @@ import IPaLog
         }
         
         
-        let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
+        if let headerFields = headerFields {
+            for headerField in headerFields.keys {
+                request.setValue(headerFields[headerField], forHTTPHeaderField: headerField)
+            }
+        }
         task = session?.downloadTask(with: request, completionHandler: {(location,response,error) in
             if error == nil {
                 if self.isCancelled {

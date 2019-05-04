@@ -47,13 +47,13 @@ open class IPaDownloadManager: NSObject {
     func cacheFilePath(with url:URL) -> String {
          return (cachePath as NSString).appendingPathComponent("\(url.absoluteString.md5String!)")
     }
-    open func download(from url:URL,fileExt:String,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
-        return self.download(from: url, to: URL(fileURLWithPath:cacheFilePath(with:url) + ".\(fileExt)"), complete: complete)
+    open func download(from url:URL,fileExt:String,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
+        return self.download(from: url, to: URL(fileURLWithPath:cacheFilePath(with:url) + ".\(fileExt)"),headerFields:headerFields, complete: complete)
     }
-    open func download(from url:URL,to path:URL? = nil,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
+    open func download(from url:URL,to path:URL? = nil,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
         let cacheFileUrl = path ?? URL(fileURLWithPath:cacheFilePath(with:url))
         
-        let operation = IPaDownloadOperation(url: url, session: session,loadedFileURL:cacheFileUrl)
+        let operation = IPaDownloadOperation(url: url, session: session,headerFields:headerFields,loadedFileURL:cacheFileUrl)
         
         operation.completionBlock = {
             complete(.success(operation.loadedFileURL))
