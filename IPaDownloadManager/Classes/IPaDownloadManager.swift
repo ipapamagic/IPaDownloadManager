@@ -7,7 +7,7 @@
 
 import UIKit
 import IPaSecurity
-public typealias IPaDownloadCompletedHandler = ((Result<URL,Error>) ->())
+public typealias IPaDownloadCompletedHandler = ((Result<(URLResponse,URL),Error>) ->())
 open class IPaDownloadManager: NSObject {
     public let IPaFileDownloadedNotification = Notification.Name(rawValue: "IPaFileDownloadedNotification")
     public let IPaFileDownloadedKeyFileUrl = "IPaFileDownloadedKeyFileUrl"
@@ -44,19 +44,24 @@ open class IPaDownloadManager: NSObject {
             operationQueue.maxConcurrentOperationCount = newValue
         }
     }
-    func cacheFilePath(with url:URL) -> String {
-         return (cachePath as NSString).appendingPathComponent("\(url.absoluteString.md5String!)")
-    }
-    open func download(from url:URL,fileExt:String,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
-        return self.download(from: url, to: URL(fileURLWithPath:cacheFilePath(with:url) + ".\(fileExt)"),headerFields:headerFields, complete: complete)
-    }
-    open func download(from url:URL,to path:URL? = nil,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
-        let cacheFileUrl = path ?? URL(fileURLWithPath:cacheFilePath(with:url))
+   
+//    open func download(from url:URL,fileExt:String,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
+//        return self.download(from: url, to: URL(fileURLWithPath:cacheFilePath(with:url) + ".\(fileExt)"),headerFields:headerFields, complete: complete)
+//    }
+    open func download(from url:URL,to directory:URL? = nil,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
+        let targetDirectory = directory ?? URL(fileURLWithPath:cachePath)
         
-        let operation = IPaDownloadOperation(url: url, session: session,headerFields:headerFields,loadedFileURL:cacheFileUrl)
+        let operation = IPaDownloadOperation(url: url, session: session,headerFields:headerFields,targetDirectory:targetDirectory)
         
         operation.completionBlock = {
-            complete(.success(operation.loadedFileURL))
+            if let loadedFileURL = operation.loadedFileURL,let response = operation.loadedURLResponse {
+                complete(.success((response,loadedFileURL)))
+            }
+            else {
+                let error = NSError(domain:"IPaDownloadManager", code:-1, userInfo:[NSLocalizedDescriptionKey:"file not loaded!"])
+                complete(.failure(error))
+            }
+            
             
         }
         if let operations = operationQueue.operations as? [IPaDownloadOperation] {
