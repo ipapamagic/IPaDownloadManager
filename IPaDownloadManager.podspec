@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'IPaDownloadManager'
-  s.version          = '1.1'
+  s.version          = '1.2'
   s.summary          = 'A short description of IPaDownloadManager.'
   s.swift_version    = '5.0'
 # This description is used to generate tags and improve search results.

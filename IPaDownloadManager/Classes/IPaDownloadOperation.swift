@@ -78,8 +78,26 @@ import IPaLog
                     let byte = asciiFileName.cString(using: .isoLatin1)
                     
                     let fileName = String(cString: byte!, encoding: .utf8)!
+                    let urlDir = (self.url.absoluteString as NSString).deletingLastPathComponent.md5String!
+                    let loadedDirURL = self.targetDirectory.appendingPathComponent(urlDir)
+                    if !FileManager.default.fileExists(atPath: loadedDirURL.absoluteString) {
+                        try? FileManager.default.createDirectory(at: loadedDirURL, withIntermediateDirectories: true, attributes: nil)
+                    }
                     
-                    let loadedFileURL = self.targetDirectory.appendingPathComponent(fileName)
+                    var loadedFileURL = loadedDirURL.appendingPathComponent(fileName)
+                    if FileManager.default.fileExists(atPath: loadedFileURL.absoluteString)
+                    {
+                        let fileNameWithoutExt = (fileName as NSString).deletingPathExtension
+                        var idx = 1
+                        var newFileURL:URL
+                        repeat {
+                            let newFileName = fileNameWithoutExt + "(\(idx))." + (fileName as NSString).pathExtension
+                            newFileURL = self.targetDirectory.appendingPathComponent(urlDir).appendingPathComponent(newFileName)
+                            idx += 1
+                        } while FileManager.default.fileExists(atPath: newFileURL.absoluteString)
+                        loadedFileURL = newFileURL
+                    }
+                    
                     try? FileManager.default.copyItem(at: location, to: loadedFileURL)
                     self.loadedFileURL = loadedFileURL
                     self.loadedURLResponse = httpResponse
