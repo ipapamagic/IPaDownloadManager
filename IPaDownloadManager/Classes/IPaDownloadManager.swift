@@ -58,7 +58,7 @@ open class IPaDownloadManager: NSObject {
                 complete(.success((response,loadedFileURL)))
             }
             else {
-                let error = NSError(domain:"IPaDownloadManager", code:-1, userInfo:[NSLocalizedDescriptionKey:"file not loaded!"])
+                let error = NSError(domain:"IPaDownloadManager", code:-1, userInfo:[NSLocalizedDescriptionKey:"file not loaded! url:\(url)"])
                 complete(.failure(error))
             }
             
