@@ -7,24 +7,46 @@
 
 import Foundation
 import IPaLog
-@objc class IPaDownloadOperation : Operation {
+@objc open class IPaDownloadOperation : Operation {
     var targetDirectory:URL
     var url:URL
     var fileName:String?
     var headerFields:[String:String]?
-    var task:URLSessionDownloadTask?
+    var downloadTaskObserver:NSKeyValueObservation?
+    var task:URLSessionDownloadTask? {
+        didSet {
+            if let downloadTaskObserver = downloadTaskObserver {
+                downloadTaskObserver.invalidate()
+                self.downloadTaskObserver = nil
+            }
+            guard let task = task else {
+                
+                return
+            }
+            downloadTaskObserver = task.progress.observe(\.fractionCompleted) {
+                (progress,_) in
+                self.progress = CGFloat(progress.fractionCompleted)
+            }
+        }
+    }
+    open var downloadTask:URLSessionDownloadTask? {
+        get {
+            return task
+        }
+    }
     weak var session:URLSession?
     var _finished:Bool = false
     var loadedFileURL:URL?
     var loadedURLResponse:HTTPURLResponse?
-    override var isExecuting:Bool {
+    @objc open dynamic var progress:CGFloat = 0
+    open override var isExecuting:Bool {
         get {
             return !isFinished && (task != nil && task!.state == .running)
         }
         
     }
     
-    override var isFinished:Bool {
+    open override var isFinished:Bool {
         get { return _finished }
         set {
             willChangeValue(forKey: "isFinished")
@@ -32,7 +54,7 @@ import IPaLog
             didChangeValue(forKey: "isFinished")
         }
     }
-    override var isConcurrent:Bool {
+    open override var isConcurrent:Bool {
         get {
             return true
         }
@@ -43,7 +65,13 @@ import IPaLog
         self.headerFields = headerFields
         self.targetDirectory = targetDirectory
     }
-    override func start() {
+    deinit {
+        if let downloadTaskObserver = downloadTaskObserver {
+            downloadTaskObserver.invalidate()
+            self.downloadTaskObserver = nil
+        }
+    }
+    open override func start() {
         if isCancelled
         {
             isFinished = true
@@ -118,7 +146,7 @@ import IPaLog
         self.didChangeValue(forKey: "isExecuting")
         
     }
-    override func cancel() {
+    open override func cancel() {
         super.cancel()
         if isExecuting {
             self.willChangeValue(forKey: "isExecuting")
