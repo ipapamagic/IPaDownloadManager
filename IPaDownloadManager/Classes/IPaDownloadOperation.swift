@@ -103,9 +103,12 @@ import IPaLog
                     return
                 }
                 if let httpResponse = response as? HTTPURLResponse ,let asciiFileName = httpResponse.suggestedFilename{
-                    let byte = asciiFileName.cString(using: .isoLatin1)
+                    var fileName = asciiFileName
+                    if let fileNameData = asciiFileName.data(using: .nonLossyASCII), let _fileName = String(data: fileNameData, encoding: .utf8) {
+                        fileName = _fileName
+                    }
                     
-                    let fileName = String(cString: byte!, encoding: .utf8)!
+                    
                     let urlDir = (self.url.absoluteString as NSString).deletingLastPathComponent.md5String!
                     let loadedDirURL = self.targetDirectory.appendingPathComponent(urlDir)
                     if !FileManager.default.fileExists(atPath: loadedDirURL.absoluteString) {
