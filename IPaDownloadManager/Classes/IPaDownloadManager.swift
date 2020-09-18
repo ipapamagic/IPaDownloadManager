@@ -49,6 +49,12 @@ open class IPaDownloadManager: NSObject {
 //        return self.download(from: url, to: URL(fileURLWithPath:cacheFilePath(with:url) + ".\(fileExt)"),headerFields:headerFields, complete: complete)
 //    }
     open func download(from url:URL,to directory:URL? = nil,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> IPaDownloadOperation  {
+        
+        let operation = self.downloadOperation(from: url, complete: complete)
+        self.operationQueue.addOperation(operation)
+        return operation
+    }
+    open func downloadOperation(from url:URL,to directory:URL? = nil,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> IPaDownloadOperation  {
         let targetDirectory = directory ?? URL(fileURLWithPath:cachePath)
         
         let operation = IPaDownloadOperation(url: url, session: session,headerFields:headerFields,targetDirectory:targetDirectory)
@@ -72,7 +78,7 @@ open class IPaDownloadManager: NSObject {
                 }
             }
         }
-        operationQueue.addOperation(operation)
+        
         return operation
     }
     
