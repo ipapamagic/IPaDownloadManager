@@ -104,7 +104,7 @@ import IPaLog
                 }
                 if let httpResponse = response as? HTTPURLResponse ,let asciiFileName = httpResponse.suggestedFilename{
                     var fileName = asciiFileName
-                    if let fileNameData = asciiFileName.data(using: .nonLossyASCII), let _fileName = String(data: fileNameData, encoding: .utf8) {
+                    if let fileNameData = asciiFileName.data(using: .isoLatin1), let _fileName = String(data: fileNameData, encoding: .utf8) {
                         fileName = _fileName
                     }
                     
