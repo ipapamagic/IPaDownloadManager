@@ -7,6 +7,7 @@
 
 import UIKit
 import IPaSecurity
+import IPaLog
 public typealias IPaDownloadCompletedHandler = ((Result<(URLResponse,URL),Error>) ->())
 open class IPaDownloadManager: NSObject {
     public let IPaFileDownloadedNotification = Notification.Name(rawValue: "IPaFileDownloadedNotification")
@@ -24,15 +25,12 @@ open class IPaDownloadManager: NSObject {
         cachePath = (cachePath as NSString).appendingPathComponent("IPaDownloadCache")
         let fileMgr = FileManager.default
         if !fileMgr.fileExists(atPath: cachePath) {
-            var error:NSError?
             do {
                 try fileMgr.createDirectory(atPath: cachePath, withIntermediateDirectories: true, attributes: nil)
-            } catch let error1 as NSError {
-                error = error1
+            } catch let error as NSError {
+                IPaLog(error.localizedDescription)
             }
-            if let error = error {
-                print(error)
-            }
+            
         }
         return cachePath
     }()
