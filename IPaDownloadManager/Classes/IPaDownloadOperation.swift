@@ -7,41 +7,29 @@
 
 import Foundation
 import IPaLog
+import Combine
 @objc open class IPaDownloadOperation : Operation {
     var targetDirectory:URL
     var url:URL
     var fileName:String?
     var headerFields:[String:String]?
-    var downloadTaskObserver:NSKeyValueObservation?
-    var task:URLSessionDownloadTask? {
-        didSet {
-            if let downloadTaskObserver = downloadTaskObserver {
-                downloadTaskObserver.invalidate()
-                self.downloadTaskObserver = nil
-            }
-            guard let task = task else {
-                
-                return
-            }
-            downloadTaskObserver = task.progress.observe(\.fractionCompleted) {
-                (progress,_) in
-                self.progress = CGFloat(progress.fractionCompleted)
-            }
+    @objc dynamic var _task:URLSessionDownloadTask?
+    open var task:URLSessionDownloadTask? {
+        get {
+            return _task
         }
     }
-    open var downloadTask:URLSessionDownloadTask? {
-        get {
-            return task
-        }
+    @objc dynamic public var progress:Double {
+        return self._task?.progress.fractionCompleted ?? 0
     }
     weak var session:URLSession?
     var _finished:Bool = false
     var loadedFileURL:URL?
     var loadedURLResponse:HTTPURLResponse?
-    @objc open dynamic var progress:CGFloat = 0
+    
     open override var isExecuting:Bool {
         get {
-            return !isFinished && (task != nil && task!.state == .running)
+            return !isFinished && (_task != nil && _task!.state == .running)
         }
         
     }
@@ -59,18 +47,19 @@ import IPaLog
             return true
         }
     }
+    @objc class public override func keyPathsForValuesAffectingValue(forKey key: String) -> Set<String> {
+        if key == "progress" {
+            return Set(arrayLiteral: "_task","_task.progress.fractionCompleted")
+        }
+        return super.keyPathsForValuesAffectingValue(forKey: key)
+    }
     init(url:URL,session:URLSession,headerFields:[String:String]?,targetDirectory:URL) {
         self.url = url
         self.session = session
         self.headerFields = headerFields
         self.targetDirectory = targetDirectory
     }
-    deinit {
-        if let downloadTaskObserver = downloadTaskObserver {
-            downloadTaskObserver.invalidate()
-            self.downloadTaskObserver = nil
-        }
-    }
+    
     open override func start() {
         if isCancelled
         {
@@ -93,7 +82,7 @@ import IPaLog
                 request.setValue(headerFields[headerField], forHTTPHeaderField: headerField)
             }
         }
-        task = session?.downloadTask(with: request, completionHandler: {(location,response,error) in
+        _task = session?.downloadTask(with: request, completionHandler: {(location,response,error) in
             if error == nil {
                 if self.isCancelled {
                     IPaLog("IPaDownloadManager:isCancelled")
@@ -145,7 +134,8 @@ import IPaLog
             self.didChangeValue(forKey: "isExecuting")
             
         })
-        task?.resume()
+        
+        _task?.resume()
         self.didChangeValue(forKey: "isExecuting")
         
     }
@@ -154,10 +144,11 @@ import IPaLog
         if isExecuting {
             self.willChangeValue(forKey: "isExecuting")
             self.isFinished = true
-            task?.cancel()
-            task = nil
+            _task?.cancel()
+            _task = nil
             self.didChangeValue(forKey: "isExecuting")
             
         }
     }
+    
 }
