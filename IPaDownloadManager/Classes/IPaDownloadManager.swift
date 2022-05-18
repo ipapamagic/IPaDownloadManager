@@ -14,9 +14,9 @@ open class IPaDownloadManager: NSObject {
     public let IPaFileDownloadedKeyFileUrl = "IPaFileDownloadedKeyFileUrl"
     public let IPaFileDownloadedKeyFileId = "IPaFileDownloadedKeyFileId"
     static public let shared = IPaDownloadManager()
-    lazy var operationQueue:OperationQueue = {
+    public private(set) lazy var operationQueue:OperationQueue = {
         let queue = OperationQueue()
-        queue.maxConcurrentOperationCount = 3
+        queue.qualityOfService = .default
         return queue
     }()
     lazy var session:URLSession = URLSession(configuration: URLSessionConfiguration.default)
