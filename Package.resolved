@@ -1,0 +1,23 @@
+{
+  "pins" : [
+    {
+      "identity" : "ipalog",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ipapamagic/IPaLog.git",
+      "state" : {
+        "revision" : "f743fdc25bd1247139ebb9f9d800230786f6000b",
+        "version" : "3.1.0"
+      }
+    },
+    {
+      "identity" : "ipasecurity",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ipapamagic/IPaSecurity.git",
+      "state" : {
+        "revision" : "58b951794d60312796f227c4dc862a4d589ad266",
+        "version" : "4.1.0"
+      }
+    }
+  ],
+  "version" : 2
+}

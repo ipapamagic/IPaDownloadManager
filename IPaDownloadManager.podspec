@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'IPaDownloadManager'
-  s.version          = '1.3'
+  s.version          = '1.4.0'
   s.summary          = 'A short description of IPaDownloadManager.'
   s.swift_version    = '5.0'
 # This description is used to generate tags and improve search results.
@@ -30,7 +30,7 @@ TODO: Add long description of the pod here.
 
   s.ios.deployment_target = '11.0'
 
-  s.source_files = 'IPaDownloadManager/Classes/**/*'
+  s.source_files = 'Sources/IPaDownloadManager/**/*'
   
   # s.resource_bundles = {
   #   'IPaDownloadManager' => ['IPaDownloadManager/Assets/*.png']
@@ -39,6 +39,7 @@ TODO: Add long description of the pod here.
   # s.public_header_files = 'Pod/Classes/**/*.h'
   # s.frameworks = 'UIKit', 'MapKit'
   # s.dependency 'AFNetworking', '~> 2.3'
-  s.dependency 'IPaSecurity', '~> 4.0'
+  s.dependency 'IPaLog', '~> 3.1.0'
+  s.dependency 'IPaSecurity', '~> 4.1.0'
 
 end

@@ -6,8 +6,8 @@
 //
 
 import UIKit
-import IPaSecurity
 import IPaLog
+import IPaSecurity
 public typealias IPaDownloadCompletedHandler = ((Result<(URLResponse,URL),Error>) ->())
 open class IPaDownloadManager: NSObject {
     public let IPaFileDownloadedNotification = Notification.Name(rawValue: "IPaFileDownloadedNotification")
