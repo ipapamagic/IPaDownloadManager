@@ -49,12 +49,12 @@ open class IPaDownloadManager: NSObject {
     @discardableResult
     open func download(from url:URL,to directory:URL? = nil,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> IPaDownloadOperation  {
         
-        let operation = self.downloadOperation(from: url, complete: complete)
+        let operation = self.downloadOperation(from: url, to:directory, complete: complete)
         self.operationQueue.addOperation(operation)
         return operation
     }
     open func downloadOperation(from url:URL,to directory:URL? = nil,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> IPaDownloadOperation  {
-        let targetDirectory = directory ?? URL(fileURLWithPath:cachePath)
+        let targetDirectory = directory ?? URL(fileURLWithPath:cachePath).appendingPathComponent(url.absoluteString.md5String ?? url.absoluteString.base64UrlString, isDirectory: true)
         
         let operation = IPaDownloadOperation(url: url, session: session,headerFields:headerFields,targetDirectory:targetDirectory)
         
