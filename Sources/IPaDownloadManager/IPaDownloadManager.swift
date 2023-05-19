@@ -8,18 +8,30 @@
 import UIKit
 import IPaLog
 import IPaSecurity
-public typealias IPaDownloadCompletedHandler = ((Result<(URLResponse,URL),Error>) ->())
+public typealias IPaDownloadResult = Result<(URLResponse,URL),Error>
+public typealias IPaDownloadCompletedHandler = ((IPaDownloadResult) ->())
+
+extension IPaDownloadResult {
+    public var locationUrl:URL? {
+        switch self {
+        case .success(let (_,url)):
+            return url
+        case .failure(_):
+            return nil
+        }
+    }
+    
+}
+
+
 open class IPaDownloadManager: NSObject {
-    public let IPaFileDownloadedNotification = Notification.Name(rawValue: "IPaFileDownloadedNotification")
-    public let IPaFileDownloadedKeyFileUrl = "IPaFileDownloadedKeyFileUrl"
-    public let IPaFileDownloadedKeyFileId = "IPaFileDownloadedKeyFileId"
     static public let shared = IPaDownloadManager()
     public private(set) lazy var operationQueue:OperationQueue = {
         let queue = OperationQueue()
         queue.qualityOfService = .default
         return queue
     }()
-    lazy var session:URLSession = URLSession(configuration: URLSessionConfiguration.default)
+    lazy var session:URLSession = URLSession(configuration: URLSessionConfiguration.default,delegate: self, delegateQueue: nil)
     lazy var cachePath:String = {
         var cachePath = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0]
         cachePath = (cachePath as NSString).appendingPathComponent("IPaDownloadCache")
@@ -42,21 +54,52 @@ open class IPaDownloadManager: NSObject {
             operationQueue.maxConcurrentOperationCount = newValue
         }
     }
-   
+    public var downloadOperationsData:Data? {
+        let operationList = self.operationQueue.operations.compactMap { operation in
+            return operation as? IPaDownloadOperation
+        }
+        return try? JSONEncoder().encode(operationList)
+    }
+    fileprivate var initContinuation:CheckedContinuation<IPaDownloadManager,Never>? = nil
+    fileprivate var initOperationData:Data? = nil
+    public override init() {
+        super.init()
+    }
+    
+    public init(with configuration: URLSessionConfiguration,operationsData:Data? = nil) {
+        super.init()
+        self.session = URLSession(configuration: configuration,delegate: self, delegateQueue: nil)
+        if let operationsData = operationsData, let operations = try? JSONDecoder().decode([IPaDownloadOperation].self, from: operationsData) {
+            for operation in operations {
+                self.operationQueue.addOperation(operation)
+            }
+        }
+    }
+        
+    public init(waitingEventWith configuration: URLSessionConfiguration,operationsData:Data? = nil) async {
+        super.init()
+        self.initOperationData = operationsData
+        _ = await withCheckedContinuation { continuation in
+            self.initContinuation = continuation
+            self.session = URLSession(configuration: configuration,delegate: self, delegateQueue: nil)
+        }
+       
+    }
+    
 //    open func download(from url:URL,fileExt:String,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
 //        return self.download(from: url, to: URL(fileURLWithPath:cacheFilePath(with:url) + ".\(fileExt)"),headerFields:headerFields, complete: complete)
 //    }
     @discardableResult
     open func download(from url:URL,to directory:URL? = nil,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> IPaDownloadOperation  {
         
-        let operation = self.downloadOperation(from: url, to:directory, complete: complete)
+        let operation = self.downloadOperation(from: url, to:directory, headerFields:headerFields,complete: complete)
         self.operationQueue.addOperation(operation)
         return operation
     }
     open func downloadOperation(from url:URL,to directory:URL? = nil,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> IPaDownloadOperation  {
         let targetDirectory = directory ?? URL(fileURLWithPath:cachePath).appendingPathComponent(url.absoluteString.md5String ?? url.absoluteString.base64UrlString, isDirectory: true)
         
-        let operation = IPaDownloadOperation(url: url, session: session,headerFields:headerFields,targetDirectory:targetDirectory)
+        let operation = IPaDownloadOperation(url: url, session: self.session,headerFields:headerFields,targetDirectory:targetDirectory)
         
         operation.completionBlock = {
             if let loadedFileURL = operation.loadedFileURL,let response = operation.loadedURLResponse {
@@ -84,5 +127,54 @@ open class IPaDownloadManager: NSObject {
     open func cancelAllOperation (){
         operationQueue.cancelAllOperations()
     }
+    func operation(for task:URLSessionTask) -> IPaDownloadOperation? {
+        return operationQueue.operations.first(where: {
+            op in
+            guard let op = op as? IPaDownloadOperation else {
+                return false
+            }
+            return op.taskId == task.taskIdentifier
+        }) as? IPaDownloadOperation
+    }
+}
+extension IPaDownloadManager:URLSessionDelegate ,URLSessionDownloadDelegate {
+    public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error = error as? NSError {
+            let userInfo = error.userInfo
+            self.operation(for: task)?.onHandleTaskDownloadError(error)
+            if let resumeData = userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+            }
+        }
+    }
     
+    public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        IPaLog("download complete")
+        self.operation(for: downloadTask)?.onHandleTaskDownload(with: downloadTask.response, to: location)
+    }
+    public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        defer {
+            self.initContinuation?.resume(returning: self)
+            self.initContinuation = nil
+            self.initOperationData = nil
+        }
+        if let operationsData = self.initOperationData {
+            let operations = try? JSONDecoder().decode([IPaDownloadOperation].self, from: operationsData)
+            session.getTasksWithCompletionHandler { _, _, downloadTasks in
+                
+                for downloadTask in downloadTasks {
+                    guard let operation = operations?.first(where: { op in
+                        guard let taskId = op.taskId,taskId == downloadTask.taskIdentifier else {
+                            return false
+                        }
+                        return true
+                    }) else {
+                        continue
+                    }
+                    operation.setupTask(downloadTask)
+                    self.operationQueue.addOperation(operation)
+                }
+            }
+        }
+    }
+  
 }
