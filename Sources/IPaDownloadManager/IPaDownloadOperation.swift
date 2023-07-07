@@ -24,13 +24,26 @@ import Combine
     
     @objc dynamic  public private(set) var task:URLSessionDownloadTask?
     {
+        willSet {
+            if let progressAnyCancellable = progressAnyCancellable {
+                progressAnyCancellable.cancel()
+                self.progressAnyCancellable = nil
+            }
+        }
         didSet {
             self.taskId = task?.taskIdentifier
+            if let task = task {
+                self.progressAnyCancellable = task.publisher(for: \.progress.fractionCompleted).sink(receiveValue: { progress in
+                    self.progress = progress
+                })
+            }
+            else {
+                self.progress = 0
+            }
         }
     }
-    @objc dynamic public var progress:Double {
-        return self.task?.progress.fractionCompleted ?? 0
-    }
+    var progressAnyCancellable:AnyCancellable? = nil
+    @objc dynamic public var progress:Double = 0
     weak var session:URLSession?
     var _finished:Bool = false
     var loadedFileURL:URL?
@@ -47,6 +60,7 @@ import Combine
         set {
             willChangeValue(forKey: "isFinished")
             _finished = newValue
+            self.task = nil
             didChangeValue(forKey: "isFinished")
         }
     }
@@ -55,10 +69,7 @@ import Combine
             return true
         }
     }
-    @objc class public func keyPathsForValuesAffectingProgress() -> Set<String> {
-        return Set(arrayLiteral: "task","task.progress.fractionCompleted")
-    }
-    
+   
     public required init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         self.taskId = try? values.decode(Int.self, forKey: .taskId)
