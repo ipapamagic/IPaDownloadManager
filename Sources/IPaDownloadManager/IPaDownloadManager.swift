@@ -148,7 +148,6 @@ extension IPaDownloadManager:URLSessionDelegate ,URLSessionDownloadDelegate {
     }
     
     public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        IPaLog("download complete")
         self.operation(for: downloadTask)?.onHandleTaskDownload(with: downloadTask.response, to: location)
     }
     public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
