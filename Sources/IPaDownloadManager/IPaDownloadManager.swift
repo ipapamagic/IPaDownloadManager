@@ -148,7 +148,7 @@ extension IPaDownloadManager:URLSessionDelegate ,URLSessionDownloadDelegate {
         if let error = error as? NSError {
             let userInfo = error.userInfo
             self.operation(for: task)?.onHandleTaskDownloadError(error)
-            if let resumeData = userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+            if let _ = userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
             }
         }
     }

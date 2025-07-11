@@ -8,7 +8,7 @@
 import Foundation
 import IPaLog
 import Combine
-@objc open class IPaDownloadOperation : Operation,Codable {
+@objc open class IPaDownloadOperation : Operation,Codable,ObservableObject, @unchecked Sendable {
     var taskId:Int? = nil
     var targetDirectory:URL
     var url:URL
@@ -43,7 +43,7 @@ import Combine
         }
     }
     var progressAnyCancellable:AnyCancellable? = nil
-    @objc dynamic public var progress:Double = 0
+    @Published public var progress:Double = 0
     weak var session:URLSession?
     var _finished:Bool = false
     var loadedFileURL:URL?
