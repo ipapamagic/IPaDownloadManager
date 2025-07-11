@@ -86,9 +86,15 @@ open class IPaDownloadManager: NSObject {
        
     }
     
-//    open func download(from url:URL,fileExt:String,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> Operation  {
-//        return self.download(from: url, to: URL(fileURLWithPath:cacheFilePath(with:url) + ".\(fileExt)"),headerFields:headerFields, complete: complete)
-//    }
+    open func download(from url:URL,to directory:URL? = nil,headerFields:[String:String]? = nil) async -> IPaDownloadResult {
+        await withCheckedContinuation { continuation in
+            let operation = self.downloadOperation(from: url, to:directory, headerFields:headerFields,complete: {
+                result in
+                continuation.resume(returning: result)
+            })
+            self.operationQueue.addOperation(operation)
+        }
+    }
     @discardableResult
     open func download(from url:URL,to directory:URL? = nil,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> IPaDownloadOperation  {
         
