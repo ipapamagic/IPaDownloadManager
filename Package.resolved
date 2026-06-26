@@ -14,7 +14,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ipapamagic/IPaSecurity.git",
       "state" : {
-        "revision" : "48939af3b76d1b06402b7622bf5c94d81f4c7e49",
+        "revision" : "81eb5038e243e787695a515cfb9ea1639dbaaecb",
         "version" : "4.1.0"
       }
     }

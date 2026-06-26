@@ -17,6 +17,7 @@ let package = Package(
         // .package(url: /* package url */, from: "1.0.0"),
         .package(url:"https://github.com/ipapamagic/IPaLog.git",from: "3.1.0") ,
         .package(url:"https://github.com/ipapamagic/IPaSecurity.git",from: "4.1.0") ,
+        .package(url:"https://github.com/ipapamagic/IPaFileCache.git",from: "1.2.0") ,
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -24,7 +25,8 @@ let package = Package(
         .target(
             name: "IPaDownloadManager",
             dependencies: [.product(name: "IPaLog", package: "IPaLog"),
-                           .product(name: "IPaSecurity", package: "IPaSecurity")]),
+                           .product(name: "IPaSecurity", package: "IPaSecurity"),
+                           .product(name: "IPaFileCache", package: "IPaFileCache")]),
         .testTarget(
             name: "IPaDownloadManagerTests",
             dependencies: ["IPaDownloadManager"]),

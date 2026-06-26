@@ -8,7 +8,8 @@
 import UIKit
 import IPaLog
 import IPaSecurity
-public typealias IPaDownloadResult = Result<(URLResponse,URL),Error>
+import IPaFileCache
+public typealias IPaDownloadResult = Result<(URLResponse?,URL),Error>
 public typealias IPaDownloadCompletedHandler = ((IPaDownloadResult) ->())
 
 extension IPaDownloadResult {
@@ -86,18 +87,43 @@ open class IPaDownloadManager: NSObject {
        
     }
     
-    open func download(from url:URL,to directory:URL? = nil,headerFields:[String:String]? = nil) async -> IPaDownloadResult {
-        await withCheckedContinuation { continuation in
+    open func download(from url:URL,to directory:URL? = nil,headerFields:[String:String]? = nil, useCache:Bool = true) async -> IPaDownloadResult {
+        // 檢查快取
+        if useCache, let cachedData = IPaFileCache.shared.cacheData(for: url) {
+            let tempURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
+            do {
+                try cachedData.write(to: tempURL)
+                return .success((nil, tempURL))
+            } catch {
+                // 快取寫入失敗，繼續下載
+            }
+        }
+
+        let result: IPaDownloadResult = await withCheckedContinuation { continuation in
             let operation = self.downloadOperation(from: url, to:directory, headerFields:headerFields,complete: {
                 result in
                 continuation.resume(returning: result)
             })
             self.operationQueue.addOperation(operation)
         }
+
+        return result
     }
     @discardableResult
-    open func download(from url:URL,to directory:URL? = nil,headerFields:[String:String]? = nil,complete:@escaping IPaDownloadCompletedHandler) -> IPaDownloadOperation  {
-        
+    open func download(from url:URL,to directory:URL? = nil,headerFields:[String:String]? = nil, useCache:Bool = true, complete:@escaping IPaDownloadCompletedHandler) -> IPaDownloadOperation?  {
+        // 檢查快取
+        if useCache, let cachedData = IPaFileCache.shared.cacheData(for: url) {
+            let tempURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
+            do {
+                try cachedData.write(to: tempURL)
+                let response = URLResponse(url: url, mimeType: nil, expectedContentLength: cachedData.count, textEncodingName: nil)
+                complete(.success((response, tempURL)))
+                return nil
+            } catch {
+                // 快取寫入失敗，繼續下載
+            }
+        }
+
         let operation = self.downloadOperation(from: url, to:directory, headerFields:headerFields,complete: complete)
         self.operationQueue.addOperation(operation)
         return operation
@@ -109,6 +135,10 @@ open class IPaDownloadManager: NSObject {
         
         operation.completionBlock = {
             if let loadedFileURL = operation.loadedFileURL,let response = operation.loadedURLResponse {
+                // 下載成功後存入快取
+                if let data = try? Data(contentsOf: loadedFileURL) {
+                    IPaFileCache.shared.setCache(data, for: url)
+                }
                 complete(.success((response,loadedFileURL)))
             }
             else {
@@ -130,6 +160,51 @@ open class IPaDownloadManager: NSObject {
         return operation
     }
     
+    /// 下載圖片並回傳 UIImage。
+    /// - 有 cache：直接 return UIImage（同步），complete 不會被呼叫
+    /// - 沒有 cache：return nil，下載完成後透過 complete callback 回傳
+    @discardableResult
+    open func downloadImage(from url:URL, useCache:Bool = true, complete:((UIImage?) -> Void)? = nil) -> UIImage? {
+        // 檢查 image cache
+        if useCache, let cachedImage = IPaImageCache.shared.cacheImage(for: url) {
+            return cachedImage
+        }
+
+        // 沒有 cache，啟動下載
+        download(from: url, useCache: useCache) { result in
+            if let locationUrl = result.locationUrl,
+               let data = try? Data(contentsOf: locationUrl),
+               let image = UIImage(data: data) {
+                IPaImageCache.shared.setCache(image, for: url)
+                DispatchQueue.main.async {
+                    complete?(image)
+                }
+            } else {
+                DispatchQueue.main.async {
+                    complete?(nil)
+                }
+            }
+        }
+        return nil
+    }
+
+    /// 下載圖片（async 版本），內部自動處理 IPaImageCache。
+    open func downloadImage(from url:URL, useCache:Bool = true) async -> UIImage? {
+        // 檢查 image cache
+        if useCache, let cachedImage = IPaImageCache.shared.cacheImage(for: url) {
+            return cachedImage
+        }
+
+        let result = await download(from: url, useCache: useCache)
+        if let locationUrl = result.locationUrl,
+           let data = try? Data(contentsOf: locationUrl),
+           let image = UIImage(data: data) {
+            IPaImageCache.shared.setCache(image, for: url)
+            return image
+        }
+        return nil
+    }
+
     open func cancelAllOperation (){
         operationQueue.cancelAllOperations()
     }
